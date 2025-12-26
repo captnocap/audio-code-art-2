@@ -1,0 +1,215 @@
+import { useRef, useEffect, useMemo } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import { useAudioStore } from '../stores/audioStore'
+import { useModeStore } from '../stores/modeStore'
+import { useFXStore } from '../stores/fxStore'
+import { expressionEngine } from '../core/ExpressionEngine'
+import NeuralDreamsMode from '../modes/NeuralDreams'
+import WormholeMode from '../modes/Wormhole'
+import PsychedelicMode from '../modes/Psychedelic'
+import ConstellationMode from '../modes/Constellation'
+import PortedWormholeMode from '../modes/WormholeMode'
+import VanillaModeWrapper from '../components/modes/VanillaModeWrapper'
+import Vanilla3DWrapper from '../components/modes/Vanilla3DWrapper'
+
+// Ported 2D Modes
+import aichatMode from '../modes/aichat'
+import antivizMode from '../modes/antiviz'
+import audiogridMode from '../modes/audiogrid'
+import audiosurfMode from '../modes/audiosurf'
+import automataMode from '../modes/automata'
+import beachMode from '../modes/beach'
+import bullethellMode from '../modes/bullethell'
+import combustionMode from '../modes/combustion'
+import contoursMode from '../modes/contours'
+import corruptionMode from '../modes/corruption'
+import crystalMode from '../modes/crystal'
+import cymaticsMode from '../modes/cymatics'
+import edgegravityMode from '../modes/edgegravity'
+import electrochemistryMode from '../modes/electrochemistry'
+import feedbackMode from '../modes/feedback'
+import flowParticlesMode from '../modes/flowParticles'
+import isometricMode from '../modes/isometric'
+import jsxgenMode from '../modes/jsxgen'
+import lsystemMode from '../modes/lsystem'
+import mandalaMode from '../modes/mandala'
+import mandelbrotMode from '../modes/mandelbrot'
+import minesweeperMode from '../modes/minesweeper'
+import mirrorMode from '../modes/mirror'
+import molecularMode from '../modes/molecular'
+import myceliumMode from '../modes/mycelium'
+import orbitalsMode from '../modes/orbitals'
+import orbitsMode from '../modes/orbits'
+import pipesMode from '../modes/pipes'
+import pixelSortMode from '../modes/pixelSort'
+import plotterMode from '../modes/plotter'
+import polymerMode from '../modes/polymer'
+import quantumgravityMode from '../modes/quantumgravity'
+import reactiondiffusionMode from '../modes/reactiondiffusion'
+import ringsMode from '../modes/rings'
+import spirographMode from '../modes/spirograph'
+import stainedglassMode from '../modes/stainedglass'
+import synesthesialiesMode from '../modes/synesthesialies'
+import terrainMode from '../modes/terrain'
+import tetrisMode from '../modes/tetris'
+import timedisplacementMode from '../modes/timedisplacement'
+import titrationMode from '../modes/titration'
+import uikitMode from '../modes/uikit'
+import voronoiMode from '../modes/voronoi'
+import wrongapiMode from '../modes/wrongapi'
+
+// Ported 3D Modes
+import beach3d3DMode from '../modes/beach3d3D'
+import demolition3DMode from '../modes/demolition3D'
+import dimensional3DMode from '../modes/dimensional3D'
+import geometry3DMode from '../modes/geometry3D'
+import gravity3DMode from '../modes/gravity3D'
+import hallucination3DMode from '../modes/hallucination3D'
+import nebula3DMode from '../modes/nebula3D'
+import protein3DMode from '../modes/protein3D'
+import psychedelic3DMode from '../modes/psychedelic3D'
+import softbody3DMode from '../modes/softbody3D'
+import topography3DMode from '../modes/topography3D'
+import tunnel3DMode from '../modes/tunnel3D'
+import wormhole3DMode from '../modes/wormhole3D'
+
+// Mode components map
+const MODES = {
+  neuralDreams: NeuralDreamsMode,
+  wormhole: WormholeMode,
+  psychedelic: PsychedelicMode,
+  constellation: (props) => <VanillaModeWrapper modeClass={ConstellationMode} {...props} />,
+  wormhole3d: (props) => <Vanilla3DWrapper modeClass={PortedWormholeMode} {...props} />,
+
+  // Ported 2D
+  aichat: (props) => <VanillaModeWrapper modeClass={aichatMode} {...props} />,
+  antiviz: (props) => <VanillaModeWrapper modeClass={antivizMode} {...props} />,
+  audiogrid: (props) => <VanillaModeWrapper modeClass={audiogridMode} {...props} />,
+  audiosurf: (props) => <VanillaModeWrapper modeClass={audiosurfMode} {...props} />,
+  automata: (props) => <VanillaModeWrapper modeClass={automataMode} {...props} />,
+  beach: (props) => <VanillaModeWrapper modeClass={beachMode} {...props} />,
+  bullethell: (props) => <VanillaModeWrapper modeClass={bullethellMode} {...props} />,
+  combustion: (props) => <VanillaModeWrapper modeClass={combustionMode} {...props} />,
+  contours: (props) => <VanillaModeWrapper modeClass={contoursMode} {...props} />,
+  corruption: (props) => <VanillaModeWrapper modeClass={corruptionMode} {...props} />,
+  crystal: (props) => <VanillaModeWrapper modeClass={crystalMode} {...props} />,
+  cymatics: (props) => <VanillaModeWrapper modeClass={cymaticsMode} {...props} />,
+  edgegravity: (props) => <VanillaModeWrapper modeClass={edgegravityMode} {...props} />,
+  electrochemistry: (props) => <VanillaModeWrapper modeClass={electrochemistryMode} {...props} />,
+  feedback: (props) => <VanillaModeWrapper modeClass={feedbackMode} {...props} />,
+  flowParticles: (props) => <VanillaModeWrapper modeClass={flowParticlesMode} {...props} />,
+  isometric: (props) => <VanillaModeWrapper modeClass={isometricMode} {...props} />,
+  jsxgen: (props) => <VanillaModeWrapper modeClass={jsxgenMode} {...props} />,
+  lsystem: (props) => <VanillaModeWrapper modeClass={lsystemMode} {...props} />,
+  mandala: (props) => <VanillaModeWrapper modeClass={mandalaMode} {...props} />,
+  mandelbrot: (props) => <VanillaModeWrapper modeClass={mandelbrotMode} {...props} />,
+  minesweeper: (props) => <VanillaModeWrapper modeClass={minesweeperMode} {...props} />,
+  mirror: (props) => <VanillaModeWrapper modeClass={mirrorMode} {...props} />,
+  molecular: (props) => <VanillaModeWrapper modeClass={molecularMode} {...props} />,
+  mycelium: (props) => <VanillaModeWrapper modeClass={myceliumMode} {...props} />,
+  orbitals: (props) => <VanillaModeWrapper modeClass={orbitalsMode} {...props} />,
+  orbits: (props) => <VanillaModeWrapper modeClass={orbitsMode} {...props} />,
+  pipes: (props) => <VanillaModeWrapper modeClass={pipesMode} {...props} />,
+  pixelSort: (props) => <VanillaModeWrapper modeClass={pixelSortMode} {...props} />,
+  plotter: (props) => <VanillaModeWrapper modeClass={plotterMode} {...props} />,
+  polymer: (props) => <VanillaModeWrapper modeClass={polymerMode} {...props} />,
+  quantumgravity: (props) => <VanillaModeWrapper modeClass={quantumgravityMode} {...props} />,
+  reactiondiffusion: (props) => <VanillaModeWrapper modeClass={reactiondiffusionMode} {...props} />,
+  rings: (props) => <VanillaModeWrapper modeClass={ringsMode} {...props} />,
+  spirograph: (props) => <VanillaModeWrapper modeClass={spirographMode} {...props} />,
+  stainedglass: (props) => <VanillaModeWrapper modeClass={stainedglassMode} {...props} />,
+  synesthesialies: (props) => <VanillaModeWrapper modeClass={synesthesialiesMode} {...props} />,
+  terrain: (props) => <VanillaModeWrapper modeClass={terrainMode} {...props} />,
+  tetris: (props) => <VanillaModeWrapper modeClass={tetrisMode} {...props} />,
+  timedisplacement: (props) => <VanillaModeWrapper modeClass={timedisplacementMode} {...props} />,
+  titration: (props) => <VanillaModeWrapper modeClass={titrationMode} {...props} />,
+  uikit: (props) => <VanillaModeWrapper modeClass={uikitMode} {...props} />,
+  voronoi: (props) => <VanillaModeWrapper modeClass={voronoiMode} {...props} />,
+  wrongapi: (props) => <VanillaModeWrapper modeClass={wrongapiMode} {...props} />,
+
+  // Ported 3D
+  beach3d3D: (props) => <Vanilla3DWrapper modeClass={beach3d3DMode} {...props} />,
+  demolition3D: (props) => <Vanilla3DWrapper modeClass={demolition3DMode} {...props} />,
+  dimensional3D: (props) => <Vanilla3DWrapper modeClass={dimensional3DMode} {...props} />,
+  geometry3D: (props) => <Vanilla3DWrapper modeClass={geometry3DMode} {...props} />,
+  gravity3D: (props) => <Vanilla3DWrapper modeClass={gravity3DMode} {...props} />,
+  hallucination3D: (props) => <Vanilla3DWrapper modeClass={hallucination3DMode} {...props} />,
+  nebula3D: (props) => <Vanilla3DWrapper modeClass={nebula3DMode} {...props} />,
+  protein3D: (props) => <Vanilla3DWrapper modeClass={protein3DMode} {...props} />,
+  psychedelic3D: (props) => <Vanilla3DWrapper modeClass={psychedelic3DMode} {...props} />,
+  softbody3D: (props) => <Vanilla3DWrapper modeClass={softbody3DMode} {...props} />,
+  topography3D: (props) => <Vanilla3DWrapper modeClass={topography3DMode} {...props} />,
+  tunnel3D: (props) => <Vanilla3DWrapper modeClass={tunnel3DMode} {...props} />,
+  wormhole3D: (props) => <Vanilla3DWrapper modeClass={wormhole3DMode} {...props} />
+}
+
+export default function SceneManager() {
+  const { gl, camera, scene } = useThree()
+  const currentMode = useModeStore(s => s.currentMode)
+  const getCurrentParams = useModeStore(s => s.getCurrentParams)
+
+  // Get individual audio values to avoid object comparison issues
+  const bass = useAudioStore(s => s.bass)
+  const mid = useAudioStore(s => s.mid)
+  const high = useAudioStore(s => s.high)
+  const amplitude = useAudioStore(s => s.amplitude)
+  const beat = useAudioStore(s => s.beat)
+  const beatPulse = useAudioStore(s => s.beatPulse)
+  const lfo1 = useAudioStore(s => s.lfo1)
+  const lfo2 = useAudioStore(s => s.lfo2)
+  const envelope = useAudioStore(s => s.envelope)
+  const time = useAudioStore(s => s.time)
+
+  // Build audio context object (stable reference using useMemo with deps)
+  const audioContext = useMemo(() => ({
+    bass, mid, high, amplitude, beat, beatPulse, lfo1, lfo2, envelope, time,
+    random: Math.random()
+  }), [bass, mid, high, amplitude, beat, beatPulse, lfo1, lfo2, envelope, time])
+
+  // Refs for animation
+  const timeRef = useRef(0)
+
+  // Get params and evaluate expressions
+  const params = getCurrentParams()
+  const evaluatedParams = useMemo(() => {
+    const result = {}
+    for (const [name, param] of Object.entries(params)) {
+      if (param.type === 'expression') {
+        result[name] = expressionEngine.evaluate(param.value, audioContext)
+      } else {
+        result[name] = param.value
+      }
+    }
+    return result
+  }, [params, audioContext])
+
+  // Get the current mode component
+  const ModeComponent = MODES[currentMode]
+
+  // Scene setup
+  useEffect(() => {
+    scene.background = null
+    camera.position.set(0, 0, 5)
+    camera.lookAt(0, 0, -50)
+  }, [scene, camera])
+
+  if (!ModeComponent) {
+    return null
+  }
+
+  return (
+    <>
+      {/* Fog for depth */}
+      <fogExp2 attach="fog" color="#000005" density={0.008} />
+
+      {/* Ambient light */}
+      <ambientLight intensity={0.3} color="#110011" />
+
+      {/* Current visualization mode */}
+      <ModeComponent
+        audioContext={audioContext}
+        params={evaluatedParams}
+      />
+    </>
+  )
+}

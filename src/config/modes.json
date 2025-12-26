@@ -1,0 +1,41 @@
+{
+    "layout": {
+        "top": {
+            "label": "3D Visualizers",
+            "color": "#8b5cf6",
+            "modes": [
+                "neuralDreams",
+                "wormholeNative",
+                "wormhole",
+                "psychedelic"
+            ]
+        },
+        "left": {
+            "label": "2D Generative",
+            "color": "#06b6d4",
+            "modes": [
+                "spirograph",
+                "rings",
+                "mandala",
+                "cymatics",
+                "voronoi",
+                "mirror"
+            ]
+        },
+        "right": {
+            "label": "Experimental",
+            "color": "#f59e0b",
+            "modes": [
+                "flowParticles",
+                "beach",
+                "audiosurf",
+                "pixelSort",
+                "bspGallery"
+            ]
+        }
+    },
+    "metadata": {
+        "version": "1.1.0",
+        "description": "Mode navigation configuration for AudioCanvasPro"
+    }
+}
