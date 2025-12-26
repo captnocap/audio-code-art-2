@@ -24,18 +24,38 @@ export default function BSPGalleryMode({ audioContext, params }) {
     setError(null)
 
     try {
-      const buffer = await file.arrayBuffer()
-      const parser = new BSPParser()
-      const data = await parser.parse(buffer)
-      setBspData(data)
-      setMapName(file.name.replace('.bsp', ''))
+      const isJson = file.name.toLowerCase().endsWith('.json')
 
-      console.log('BSP loaded:', {
-        entities: data.entities.length,
-        faces: data.faces.length,
-        textures: data.textures.length,
-        vertices: data.vertices.length
-      })
+      if (isJson) {
+        // Load pre-converted JSON (fast path)
+        const text = await file.text()
+        const data = JSON.parse(text)
+        setBspData({
+          ...data,
+          isPrecomputed: true
+        })
+        setMapName(data.meta?.source?.replace('.bsp', '') || file.name.replace('.json', ''))
+
+        console.log('BSP JSON loaded:', {
+          triangles: data.meta?.stats?.triangles,
+          textures: data.meta?.stats?.textures,
+          entities: data.entities?.length
+        })
+      } else {
+        // Parse raw BSP (slower)
+        const buffer = await file.arrayBuffer()
+        const parser = new BSPParser()
+        const data = await parser.parse(buffer)
+        setBspData(data)
+        setMapName(file.name.replace('.bsp', ''))
+
+        console.log('BSP loaded:', {
+          entities: data.entities.length,
+          faces: data.faces.length,
+          textures: data.textures.length,
+          vertices: data.vertices.length
+        })
+      }
     } catch (err) {
       console.error('BSP parse error:', err)
       setError(err.message)
@@ -71,15 +91,18 @@ export default function BSPGalleryMode({ audioContext, params }) {
     e.stopPropagation()
 
     const files = Array.from(e.dataTransfer.files)
-    const bspFile = files.find(f => f.name.toLowerCase().endsWith('.bsp'))
+    const mapFile = files.find(f =>
+      f.name.toLowerCase().endsWith('.bsp') ||
+      f.name.toLowerCase().endsWith('.json')
+    )
     const wadFiles = files.filter(f => f.name.toLowerCase().endsWith('.wad'))
 
     if (wadFiles.length > 0) {
       handleWADLoad(wadFiles)
     }
 
-    if (bspFile) {
-      handleBSPLoad(bspFile)
+    if (mapFile) {
+      handleBSPLoad(mapFile)
     }
   }, [handleBSPLoad, handleWADLoad])
 
@@ -106,9 +129,9 @@ export default function BSPGalleryMode({ audioContext, params }) {
               ) : (
                 <>
                   <div className="text-4xl mb-4">🗺️</div>
-                  <div className="text-white/80 font-medium mb-2">Drop BSP file here</div>
+                  <div className="text-white/80 font-medium mb-2">Drop map file here</div>
                   <div className="text-white/40 text-sm">
-                    Half-Life / CS 1.6 maps
+                    .bsp or .json (pre-converted)
                   </div>
                 </>
               )}
@@ -124,7 +147,7 @@ export default function BSPGalleryMode({ audioContext, params }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".bsp"
+                accept=".bsp,.json"
                 className="hidden"
                 onChange={(e) => e.target.files[0] && handleBSPLoad(e.target.files[0])}
               />
@@ -132,7 +155,7 @@ export default function BSPGalleryMode({ audioContext, params }) {
                 onClick={() => fileInputRef.current?.click()}
                 className="px-4 py-2 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 rounded-lg transition-colors"
               >
-                Browse BSP
+                Browse Map
               </button>
 
               <input
@@ -162,8 +185,9 @@ export default function BSPGalleryMode({ audioContext, params }) {
             </div>
 
             <div className="mt-8 text-white/20 text-xs max-w-sm mx-auto">
-              Try de_dust2.bsp, cs_office.bsp, or any GoldSrc map.
-              WAD files provide textures (halflife.wad, cstrike.wad)
+              Drop .bsp files directly, or use pre-converted .json for instant loading.
+              <br />
+              <span className="text-white/30">Convert with: node tools/bsp-to-json.cjs map.bsp</span>
             </div>
           </div>
         </div>
@@ -192,7 +216,7 @@ export default function BSPGalleryMode({ audioContext, params }) {
         <div className="bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2 text-white/80">
           <div className="text-sm font-medium">{mapName}</div>
           <div className="text-xs text-white/40">
-            {bspData.faces.length} faces | Click to fly | ESC to unlock
+            {bspData.meta?.stats?.triangles || bspData.faces?.length || '?'} {bspData.isPrecomputed ? 'tris' : 'faces'} | Click to fly | ESC to unlock
           </div>
         </div>
       </Html>

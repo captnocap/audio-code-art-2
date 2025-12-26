@@ -195,8 +195,21 @@ function FlyCamera({ speed = 5, sensitivity = 0.002 }) {
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
 
   useEffect(() => {
-    const handleKeyDown = (e) => { keys.current[e.code] = true }
-    const handleKeyUp = (e) => { keys.current[e.code] = false }
+    const handleKeyDown = (e) => {
+      keys.current[e.code] = true
+      // Prevent UI hotkeys when flying
+      if (isPointerLocked.current) {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+    }
+    const handleKeyUp = (e) => {
+      keys.current[e.code] = false
+      if (isPointerLocked.current) {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+    }
 
     const handleMouseMove = (e) => {
       if (!isPointerLocked.current) return
@@ -267,21 +280,54 @@ export default function BSPRenderer({ bspData, wadTextures, audioContext }) {
   useEffect(() => {
     if (!bspData) return
 
-    // Get all face indices from model 0 (the world)
-    const worldModel = bspData.models[0]
-    const faceIndices = []
-    for (let i = 0; i < worldModel.numFaces; i++) {
-      faceIndices.push(worldModel.firstFace + i)
-    }
+    let geometry, groups
 
-    const { geometry, groups } = buildFaceGeometry(bspData, faceIndices, bspData.textures, wadTextures)
+    if (bspData.isPrecomputed && bspData.geometry) {
+      // Fast path: use pre-computed geometry from JSON
+      const geo = bspData.geometry
+      geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(geo.positions, 3))
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(geo.normals, 3))
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(geo.uvs, 2))
+
+      // Scale down (GoldSrc units are large)
+      const positions = geometry.attributes.position.array
+      for (let i = 0; i < positions.length; i++) {
+        positions[i] *= SCALE
+      }
+
+      groups = Object.entries(geo.groups).map(([textureName, g], i) => ({
+        start: g.start,
+        count: g.count,
+        materialIndex: i,
+        textureName
+      }))
+
+      groups.forEach((g, i) => {
+        geometry.addGroup(g.start, g.count, i)
+      })
+
+      console.log('Using precomputed geometry:', groups.length, 'texture groups')
+    } else {
+      // Slow path: compute geometry from raw BSP
+      const worldModel = bspData.models[0]
+      const faceIndices = []
+      for (let i = 0; i < worldModel.numFaces; i++) {
+        faceIndices.push(worldModel.firstFace + i)
+      }
+
+      const result = buildFaceGeometry(bspData, faceIndices, bspData.textures, wadTextures)
+      geometry = result.geometry
+      groups = result.groups
+    }
 
     // Create materials for each texture group
     const materials = groups.map(g => {
-      const texture = createTexture(
-        bspData.textures.find(t => t?.name === g.textureName),
-        wadTextures
-      )
+      const texData = bspData.isPrecomputed
+        ? bspData.textures?.find(t => t?.name === g.textureName)
+        : bspData.textures?.find(t => t?.name === g.textureName)
+
+      const texture = createTexture(texData, wadTextures)
 
       return new THREE.MeshStandardMaterial({
         map: texture,
